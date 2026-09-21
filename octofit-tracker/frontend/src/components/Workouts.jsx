@@ -1,5 +1,16 @@
 import { useEffect, useState } from 'react'
-import { fetchCollection } from '../api.js'
+
+const workoutsApiUrl = import.meta.env.VITE_CODESPACE_NAME
+  ? `https://${import.meta.env.VITE_CODESPACE_NAME}-8000.app.github.dev/api/workouts`
+  : 'http://localhost:8000/api/workouts'
+
+function normalizeWorkouts(payload) {
+  if (Array.isArray(payload)) {
+    return payload
+  }
+
+  return payload?.workouts || payload?.results || payload?.items || payload?.data || []
+}
 
 function Workouts() {
   const [workouts, setWorkouts] = useState([])
@@ -9,7 +20,15 @@ function Workouts() {
   useEffect(() => {
     const controller = new AbortController()
 
-    fetchCollection('workouts', controller.signal)
+    fetch(workoutsApiUrl, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Request failed for workouts: ${response.status}`)
+        }
+
+        return response.json()
+      })
+      .then(normalizeWorkouts)
       .then((items) => {
         setWorkouts(items)
         setStatus('ready')

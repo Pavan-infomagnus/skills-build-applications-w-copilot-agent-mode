@@ -1,5 +1,16 @@
 import { useEffect, useState } from 'react'
-import { fetchCollection } from '../api.js'
+
+const activitiesApiUrl = import.meta.env.VITE_CODESPACE_NAME
+  ? `https://${import.meta.env.VITE_CODESPACE_NAME}-8000.app.github.dev/api/activities`
+  : 'http://localhost:8000/api/activities'
+
+function normalizeActivities(payload) {
+  if (Array.isArray(payload)) {
+    return payload
+  }
+
+  return payload?.activities || payload?.results || payload?.items || payload?.data || []
+}
 
 function Activities() {
   const [activities, setActivities] = useState([])
@@ -9,7 +20,15 @@ function Activities() {
   useEffect(() => {
     const controller = new AbortController()
 
-    fetchCollection('activities', controller.signal)
+    fetch(activitiesApiUrl, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Request failed for activities: ${response.status}`)
+        }
+
+        return response.json()
+      })
+      .then(normalizeActivities)
       .then((items) => {
         setActivities(items)
         setStatus('ready')

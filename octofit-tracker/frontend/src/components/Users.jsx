@@ -1,5 +1,16 @@
 import { useEffect, useState } from 'react'
-import { fetchCollection } from '../api.js'
+
+const usersApiUrl = import.meta.env.VITE_CODESPACE_NAME
+  ? `https://${import.meta.env.VITE_CODESPACE_NAME}-8000.app.github.dev/api/users`
+  : 'http://localhost:8000/api/users'
+
+function normalizeUsers(payload) {
+  if (Array.isArray(payload)) {
+    return payload
+  }
+
+  return payload?.users || payload?.results || payload?.items || payload?.data || []
+}
 
 function Users() {
   const [users, setUsers] = useState([])
@@ -9,7 +20,15 @@ function Users() {
   useEffect(() => {
     const controller = new AbortController()
 
-    fetchCollection('users', controller.signal)
+    fetch(usersApiUrl, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Request failed for users: ${response.status}`)
+        }
+
+        return response.json()
+      })
+      .then(normalizeUsers)
       .then((items) => {
         setUsers(items)
         setStatus('ready')

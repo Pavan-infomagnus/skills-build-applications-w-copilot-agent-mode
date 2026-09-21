@@ -1,5 +1,16 @@
 import { useEffect, useState } from 'react'
-import { fetchCollection } from '../api.js'
+
+const teamsApiUrl = import.meta.env.VITE_CODESPACE_NAME
+  ? `https://${import.meta.env.VITE_CODESPACE_NAME}-8000.app.github.dev/api/teams`
+  : 'http://localhost:8000/api/teams'
+
+function normalizeTeams(payload) {
+  if (Array.isArray(payload)) {
+    return payload
+  }
+
+  return payload?.teams || payload?.results || payload?.items || payload?.data || []
+}
 
 function Teams() {
   const [teams, setTeams] = useState([])
@@ -9,7 +20,15 @@ function Teams() {
   useEffect(() => {
     const controller = new AbortController()
 
-    fetchCollection('teams', controller.signal)
+    fetch(teamsApiUrl, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Request failed for teams: ${response.status}`)
+        }
+
+        return response.json()
+      })
+      .then(normalizeTeams)
       .then((items) => {
         setTeams(items)
         setStatus('ready')
